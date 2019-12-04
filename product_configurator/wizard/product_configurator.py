@@ -143,6 +143,7 @@ class ProductConfigurator(models.TransientModel):
             config_session_id = self.config_session_id
 
         domains = {}
+        check_avail_ids = cfg_val_ids[:]
         for line in product_tmpl_id.attribute_line_ids.sorted():
             field_name = field_prefix + str(line.attribute_id.id)
 
@@ -152,10 +153,14 @@ class ProductConfigurator(models.TransientModel):
             vals = values[field_name]
 
             # get available values
-            avail_ids = config_session_id.values_available(
-                check_val_ids=line.value_ids.ids, value_ids=cfg_val_ids)
-            domains[field_name] = [('id', 'in', avail_ids)]
 
+            avail_ids = config_session_id.values_available(
+                check_val_ids=line.value_ids.ids, value_ids=check_avail_ids)
+            domains[field_name] = [('id', 'in', avail_ids)]
+            check_avail_ids = list(
+                set(check_avail_ids) -
+                (set(line.value_ids.ids) - set(avail_ids))
+            )
             # Include custom value in the domain if attr line permits it
             if line.custom:
                 custom_val = config_session_id.get_custom_value_id()
@@ -610,8 +615,10 @@ class ProductConfigurator(models.TransientModel):
                     attr_field = field_prefix + str(attr_id)
                     attr_lines = wiz.product_tmpl_id.attribute_line_ids
                     # If the fields it depends on are not in the config step
-                    if config_steps and str(attr_line.id) != wiz.state:
-                        continue
+                    # allow to update attrs for all attribute.\ otherwise
+                    # required will not work with stepchange using statusbar.
+                    # if config_steps and wiz.state not in cfg_step_ids:
+                    #     continue
                     if attr_field not in attr_depends:
                         attr_depends[attr_field] = set()
                     if domain_line.condition == 'in':
@@ -626,10 +633,13 @@ class ProductConfigurator(models.TransientModel):
                 for dependee_field, val_ids in attr_depends.items():
                     if not val_ids:
                         continue
-                    attrs['readonly'].append(
-                        (dependee_field, 'not in', list(val_ids)))
-                    attrs['required'].append(
-                        (dependee_field, 'in', list(val_ids)))
+                    if not attr_line.custom:
+                        attrs['readonly'].append(
+                            (dependee_field, 'not in', list(val_ids)))
+
+                    if attr_line.required and not attr_line.custom:
+                        attrs['required'].append(
+                            (dependee_field, 'in', list(val_ids)))
 
             # Create the new field in the view
             node = etree.Element(
