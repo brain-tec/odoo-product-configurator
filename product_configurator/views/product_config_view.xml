@@ -161,6 +161,30 @@
         </field>
     </record>
 
+     <record id="product_config_session_search_view" model="ir.ui.view">
+        <field name="name">product.config.session.search</field>
+        <field name="model">product.config.session</field>
+        <field name="arch" type="xml">
+            <search string="Configuration Sessions">
+                <field name="name"/>
+                <field name="product_tmpl_id"/>
+                <field name="value_ids"/>
+                <field name="user_id"/>
+                <field name="price"/>
+                <field name="config_step_name"/>
+                <field name="product_id"/>
+                <separator/>
+                <filter name="session_draft" string="Active Sessions" domain="[('state','=','draft')]"/>
+                <filter name="session_done" string="Completed Sessions" domain="[('state','=','done')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="State" name="state" context="{'group_by':'state'}"/>
+                    <filter string="Product Template" name="product_tmpl_id" context="{'group_by':'product_tmpl_id'}"/>
+                    <filter string="User" name="user_id" context="{'group_by':'user_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record model="ir.actions.act_window" id="action_attributes_view">
         <field name="name">Attributes</field>
         <field name="type">ir.actions.act_window</field>
